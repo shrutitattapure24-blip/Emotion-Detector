@@ -1,0 +1,4 @@
+Flask==3.0.3
+ibm-watson==8.0.0
+pytest==8.3.3
+pylint==3.0.3
