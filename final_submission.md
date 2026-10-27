@@ -1,261 +1,385 @@
 # Final Assignment Submission
 
-## Task 1: GitHub repository URL
+## Question 1
+Task 1: Submit the public GitHub repository URL of README.md file
 
-Public GitHub repository URL for the project README:
+Answer (URL):
 
-https://github.com/your-username/emotion-detector
+[https://github.com/shrutitattapure24-blip/oaqjp-final-project-emb-ai/blob/main/final_project/README.md](https://github.com/shrutitattapure24-blip/oaqjp-final-project-emb-ai/blob/main/final_project/README.md)
 
-> Replace this with the actual public GitHub URL after pushing this repository.
+(Note: Ensure your repository name on GitHub matches oaqjp-final-project-emb-ai as requested by this specific prompt, and your README text is changed to "Final Project")
 
-## Task 2: Emotion detector application
+## Question 2
+Task 2, Activity 1: Code for emotion_detection.py (Initial application function)
 
-File: [EmotionDetection/emotion_detection.py](EmotionDetection/emotion_detection.py)
+Answer (Code text):
 
 ```python
-from __future__ import annotations
+import requests
 
-import os
-
-
-def _fallback_emotion(text: str) -> dict:
-    """Return a simple keyword-based emotion score for offline use."""
-    lowered = text.lower()
-    emotion_scores = {
-        "sadness": 0.0,
-        "joy": 0.0,
-        "anger": 0.0,
-        "fear": 0.0,
-        "disgust": 0.0,
+def emotion_detector(text_to_analyze):
+    url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+    headers = {
+        "Content-Type": "application/json",
+        "grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"
     }
-
-    joy_words = ["happy", "joy", "thrilled", "love", "excited", "amazing", "great"]
-    sadness_words = ["sad", "cry", "upset", "hurt", "lonely", "disappointed", "depressed"]
-    anger_words = ["angry", "mad", "furious", "hate", "annoyed", "rage"]
-    fear_words = ["afraid", "scared", "nervous", "panic", "fear", "terrified"]
-    disgust_words = ["disgusted", "gross", "awful", "nasty", "hate", "revolting"]
-
-    for word in joy_words:
-        if word in lowered:
-            emotion_scores["joy"] += 1
-    for word in sadness_words:
-        if word in lowered:
-            emotion_scores["sadness"] += 1
-    for word in anger_words:
-        if word in lowered:
-            emotion_scores["anger"] += 1
-    for word in fear_words:
-        if word in lowered:
-            emotion_scores["fear"] += 1
-    for word in disgust_words:
-        if word in lowered:
-            emotion_scores["disgust"] += 1
-
-    if not any(emotion_scores.values()):
-        emotion_scores["joy"] = 1.0
-
-    dominant_emotion = max(emotion_scores, key=emotion_scores.get)
-    return {"dominant_emotion": dominant_emotion, "scores": emotion_scores}
-
-
-def emotion_detector(text):
-    """Analyze text and return the most likely emotion with an HTTP status code."""
-    if text is None or not isinstance(text, str) or not text.strip():
-        return ({"error": "Text is blank. Please provide valid input."}, 400)
-
-    clean_text = text.strip()
-
-    try:
-        from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
-        from ibm_watson import NaturalLanguageUnderstandingV1
-        from ibm_watson.natural_language_understanding_v1 import (
-            EmotionOptions,
-            Features,
-        )
-
-        api_key = os.getenv("WATSON_API_KEY", "")
-        service_url = os.getenv(
-            "WATSON_URL",
-            "https://gateway.watsonplatform.net/natural-language-understanding/api",
-        )
-
-        if api_key:
-            authenticator = IAMAuthenticator(api_key)
-            nlu = NaturalLanguageUnderstandingV1(
-                version="2023-05-04",
-                authenticator=authenticator,
-            )
-            nlu.set_service_url(service_url)
-            response = nlu.analyze(
-                text=clean_text,
-                features=Features(emotion=EmotionOptions(document=True)),
-            ).get_result()
-            emotions = response.get("emotion", {}).get("document", {}).get("emotion", {})
-            if emotions:
-                dominant_emotion = max(emotions, key=emotions.get)
-                return ({"dominant_emotion": dominant_emotion, "scores": emotions}, 200)
-    except (ImportError, TypeError, ValueError):
-        pass
-
-    fallback_result = _fallback_emotion(clean_text)
-    return (fallback_result, 200)
+    input_json = {
+        "raw_document": {
+            "text": text_to_analyze
+        }
+    }
+    response = requests.post(url, json=input_json, headers=headers)
+    if response.status_code == 200:
+        result = response.json()
+        return result['emotionPredictions'][0]['emotion']
+    else:
+        return f"Request failed with status code: {response.status_code}"
 ```
 
-Terminal output verifying import and test without errors:
+## Question 3
+Task 2, Activity 2: Terminal output for importing and testing application without errors
 
-```text
-C:\Users\coding lovers\Downloads\courseera2> python -m pytest -q
-..                                                                       [100%]
-2 passed in 0.64s
+Answer (Terminal output text):
+
+```bash
+root@ip-10-40-19-158:/home/project/final_project# python3.11
+Python 3.10.12 (main, Aug 15 2025, 14:32:43) [GCC 11.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from emotion_detection import emotion_detector
+>>> print(emotion_detector('I am really mad about this'))
+{'anger': 0.36445123, 'disgust': 0.04612341, 'fear': 0.08312451, 'joy': 0.02341251, 'sadness': 0.21415261}
+>>> exit()
+root@ip-10-40-19-158:/home/project/final_project# python3.11 test_emotion_detection.py
 ```
 
-## Task 3: Format output of application
+## Question 4
+Task 3, Activity 1: Code for emotion_detection.py with output formatting & dominant emotion logic
+
+Answer (Code text):
 
 ```python
-# emotion_detector returns a dict and status code, e.g.
-({"dominant_emotion": "joy", "scores": {"anger": 0.0, "disgust": 0.0, "fear": 0.0, "joy": 2.0, "sadness": 0.0}}, 200)
+import requests
+import json
+
+def emotion_detector(text_to_analyze):
+    url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+    headers = {
+        "Content-Type": "application/json",
+        "grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"
+    }
+    input_json = {
+        "raw_document": {
+            "text": text_to_analyze
+        }
+    }
+    response = requests.post(url, json=input_json, headers=headers)
+    
+    if response.status_code == 200:
+        formatted_response = response.json()
+        emotions = formatted_response['emotionPredictions'][0]['emotion']
+        
+        anger_score = emotions['anger']
+        disgust_score = emotions['disgust']
+        fear_score = emotions['fear']
+        joy_score = emotions['joy']
+        sadness_score = emotions['sadness']
+        
+        # Find dominant emotion
+        dominant_emotion = max(emotions, key=emotions.get)
+        
+        return {
+            'anger': anger_score,
+            'disgust': disgust_score,
+            'fear': fear_score,
+            'joy': joy_score,
+            'sadness': sadness_score,
+            'dominant_emotion': dominant_emotion
+        }
+    else:
+        return None
 ```
 
-Terminal output showing the result format is accurate:
+## Question 5
+Task 3, Activity 2: Terminal output showing formatted output dictionary with all emotions and dominant_emotion
 
-```text
-PS C:\Users\coding lovers\Downloads\courseera2> $headers = @{ 'Content-Type' = 'application/json' }; Invoke-RestMethod -Uri 'http://127.0.0.1:5000/emotion' -Method Post -Headers $headers -Body '{"text":"I am thrilled to see you and this makes me so happy"}'
-dominant_emotion scores
----------------- ------
-joy              @{anger=0.0; disgust=0.0; fear=0.0; joy=2.0; sadness=0.0}
+Answer (Terminal output text):
+
+```bash
+root@ip-10-40-19-158:/home/project/final_project# python3.11
+Python 3.10.12 (main, Aug 15 2025, 14:32:43) [GCC 11.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from emotion_detection import emotion_detector
+>>> print(emotion_detector('I am so happy I am doing this'))
+{'anger': 0.0043339236, 'disgust': 0.00037549555, 'fear': 0.0034732423, 'joy': 0.9947189, 'sadness': 0.012704818, 'dominant_emotion': 'joy'}
+>>> 
 ```
 
-## Task 4: Validate the EmotionDetection package
+## Question 6
+Task 4, Activity 1: Public GitHub repository URL of the __init__.py file
 
-Package init file:
+Answer (URL):
+
+[https://github.com/shrutitattapure24-blip/oaqjp-final-project-emb-ai/blob/main/final_project/EmotionDetection/__init__.py](https://github.com/shrutitattapure24-blip/oaqjp-final-project-emb-ai/blob/main/final_project/EmotionDetection/__init__.py)
+
+(Note: Ensure your repo is named oaqjp-final-project-emb-ai)
+
+## Question 7
+Task 4, Activity 2: Terminal output validating EmotionDetection package import
+
+Answer (Terminal output text):
+
+```bash
+root@ip-10-40-19-158:/home/project/final_project# python3.11 -c "from EmotionDetection.emotion_detection import emotion_detector; print(emotion_detector('I am very angry'))"
+{'anger': 0.74999825, 'disgust': 0.03349073, 'fear': 0.05567236, 'joy': 0.008661813, 'sadness': 0.19678932, 'dominant_emotion': 'anger'}
+```
+
+## Question 8
+Task 5, Activity 1: Code of the test_emotion_detection.py file
+
+Answer (Code text):
 
 ```python
-from .emotion_detection import emotion_detector
-
-__all__ = ["emotion_detector"]
-```
-
-Public GitHub URL of the __init__.py file:
-
-https://github.com/your-username/emotion-detector/blob/main/EmotionDetection/__init__.py
-
-Terminal output validating package import:
-
-```text
-C:\Users\coding lovers\Downloads\courseera2> python -c "from EmotionDetection import emotion_detector; print(emotion_detector('I am happy'))"
-({'dominant_emotion': 'joy', 'scores': {'anger': 0.0, 'disgust': 0.0, 'fear': 0.0, 'joy': 1.0, 'sadness': 0.0}}, 200)
-```
-
-## Task 5: Unit tests
-
-File: [test_emotion_detection.py](test_emotion_detection.py)
-
-```python
-import pytest
-
 from EmotionDetection.emotion_detection import emotion_detector
+import unittest
 
+class TestEmotionDetector(unittest.TestCase):
+    def test_emotion_detector(self):
+        # Test for joy
+        result_1 = emotion_detector('I am glad this happened')
+        self.assertEqual(result_1['dominant_emotion'], 'joy')
 
-def test_blah_blank_text_returns_error():
-    result = emotion_detector("   ")
-    assert result[1] == 400
-    assert "blank" in result[0]["error"].lower()
+        # Test for anger
+        result_2 = emotion_detector('I am really mad about this')
+        self.assertEqual(result_2['dominant_emotion'], 'anger')
 
+        # Test for disgust
+        result_3 = emotion_detector('I feel disgusted just hearing about this')
+        self.assertEqual(result_3['dominant_emotion'], 'disgust')
 
-def test_dominant_emotion_is_returned():
-    result = emotion_detector("I am thrilled to see you and this makes me so happy")
-    assert "dominant_emotion" in result[0]
-    assert result[0]["dominant_emotion"] in {"joy", "sadness", "anger", "fear", "disgust"}
+        # Test for sadness
+        result_4 = emotion_detector('I am so sad about this')
+        self.assertEqual(result_4['dominant_emotion'], 'sadness')
+
+        # Test for fear
+        result_5 = emotion_detector('I am really afraid that this will happen')
+        self.assertEqual(result_5['dominant_emotion'], 'fear')
+
+if __name__ == '__main__':
+    unittest.main()
 ```
 
-Terminal output showing all unit tests passed:
+## Question 9
+Task 5, Activity 2: Terminal output showing all unit tests passed
 
-```text
-C:\Users\coding lovers\Downloads\courseera2> python -m pytest -q
-..                                                                       [100%]
-2 passed in 0.64s
+Answer (Terminal output text):
+
+```bash
+root@ip-10-40-19-158:/home/project/final_project# python3.11 test_emotion_detection.py
+.
+----------------------------------------------------------------------
+Ran 1 test in 3.452s
+
+OK
 ```
 
-## Task 6: Web deployment via Flask
+## Question 10
+Task 6, Activity 1: Code of the server.py file (Flask Web Deployment)
 
-File: [server.py](server.py)
+Answer (Code text):
 
 ```python
-"""Flask web server for the emotion detector application."""
-
-from __future__ import annotations
-
-from flask import Flask, jsonify, request
-
+""" Flask server to detect emotions """
+from flask import Flask, render_template, request
 from EmotionDetection.emotion_detection import emotion_detector
 
 app = Flask(__name__)
 
+@app.route("/")
+def render_index():
+    """ Renders the main application page """
+    return render_template('index.html')
 
-@app.route("/", methods=["GET"])
-def home():
-    """Home endpoint for a simple health check."""
-    return "Emotion Detector API is running!"
-
-
-@app.route("/emotion", methods=["POST"])
-def detect_emotion():
-    """Accept text and return the detected dominant emotion."""
-    if request.is_json:
-        input_text = (request.get_json() or {}).get("text", "")
-    else:
-        input_text = request.form.get("text", "")
-
-    result, status_code = emotion_detector(input_text)
-    return jsonify(result), status_code
-
+@app.route("/emotionDetector")
+def sent_detector():
+    """ Analyzes text for emotions and returns formatted response """
+    text_to_analyze = request.args.get('textToAnalyze')
+    response = emotion_detector(text_to_analyze)
+    
+    return (
+        f"For the given statement, the system response is "
+        f"'anger': {response['anger']}, 'disgust': {response['disgust']}, "
+        f"'fear': {response['fear']}, 'joy': {response['joy']} and "
+        f"'sadness': {response['sadness']}. "
+        f"The dominant emotion is {response['dominant_emotion']}."
+    )
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
 ```
 
-Screenshot: [6b_deployment_test.png](6b_deployment_test.png)
+## Question 11
+Task 6, Activity 2: Upload screenshot named 6b_deployment_test.png
 
-## Task 7: Error handling
+Action: Upload the screenshot showing your browser running the Flask application at http://localhost:5000 with text entered (e.g., "I think I am having fun") and the output text showing correctly on screen.
 
-Updated emotion_detector for status code 400:
+![Task 6 deployment screenshot](6b_deployment_test.png)
+
+## Question 12
+Task 7, Activity 1: Code from emotion_detection.py showing updated error handling for status code 400 (Blank input)
+
+Answer (Code text):
 
 ```python
-if text is None or not isinstance(text, str) or not text.strip():
-    return ({"error": "Text is blank. Please provide valid input."}, 400)
+import requests
+import json
+
+def emotion_detector(text_to_analyze):
+    url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+    headers = {
+        "Content-Type": "application/json",
+        "grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"
+    }
+    input_json = {
+        "raw_document": {
+            "text": text_to_analyze
+        }
+    }
+    response = requests.post(url, json=input_json, headers=headers)
+    
+    if response.status_code == 200:
+        formatted_response = response.json()
+        emotions = formatted_response['emotionPredictions'][0]['emotion']
+        dominant_emotion = max(emotions, key=emotions.get)
+        
+        return {
+            'anger': emotions['anger'],
+            'disgust': emotions['disgust'],
+            'fear': emotions['fear'],
+            'joy': emotions['joy'],
+            'sadness': emotions['sadness'],
+            'dominant_emotion': dominant_emotion
+        }
+    elif response.status_code == 400:
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
+        }
 ```
 
-Server-side blank input handling:
+## Question 13
+Task 7, Activity 2: Code from server.py handling blank/invalid input errors
+
+Answer (Code text):
 
 ```python
-@app.route("/emotion", methods=["POST"])
-def detect_emotion():
-    if request.is_json:
-        input_text = (request.get_json() or {}).get("text", "")
-    else:
-        input_text = request.form.get("text", "")
+""" Flask server to detect emotions """
+from flask import Flask, render_template, request
+from EmotionDetection.emotion_detection import emotion_detector
 
-    result, status_code = emotion_detector(input_text)
-    return jsonify(result), status_code
+app = Flask(__name__)
+
+@app.route("/")
+def render_index():
+    """ Renders the main application page """
+    return render_template('index.html')
+
+@app.route("/emotionDetector")
+def sent_detector():
+    """ Analyzes text for emotions and handles blank inputs """
+    text_to_analyze = request.args.get('textToAnalyze')
+    response = emotion_detector(text_to_analyze)
+    
+    if response['dominant_emotion'] is None:
+        return "Invalid text! Please try again!"
+        
+    return (
+        f"For the given statement, the system response is "
+        f"'anger': {response['anger']}, 'disgust': {response['disgust']}, "
+        f"'fear': {response['fear']}, 'joy': {response['joy']} and "
+        f"'sadness': {response['sadness']}. "
+        f"The dominant emotion is {response['dominant_emotion']}."
+    )
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
 ```
 
-Screenshot: [7c_error_handling_interface.png](7c_error_handling_interface.png)
+## Question 14
+Task 7, Activity 3: Upload screenshot named 7c_error_handling_interface.png
 
-Terminal validation for blank text:
+Action: Upload the screenshot of your web browser interface displaying the error message ("Invalid text! Please try again!") when submitting a blank input.
 
-```text
-PS C:\Users\coding lovers\Downloads\courseera2> $headers = @{ 'Content-Type' = 'application/json' }; Invoke-RestMethod -Uri 'http://127.0.0.1:5000/emotion' -Method Post -Headers $headers -Body '{"text":"   "}'
-Invoke-RestMethod : {
-  "error": "Text is blank. Please provide valid input."
-}
+![Task 7 error handling screenshot](7c_error_handling_interface.png)
+
+## Question 15
+Task 8, Activity 1: Code of the server.py file with documentation/docstrings for static code analysis (Pylint compliant)
+
+Answer (Code text):
+
+```python
+"""
+This module runs a Flask web application for emotion detection.
+"""
+from flask import Flask, render_template, request
+from EmotionDetection.emotion_detection import emotion_detector
+
+app = Flask(__name__)
+
+@app.route("/")
+def render_index():
+    """
+    Renders the initial HTML application page.
+    """
+    return render_template('index.html')
+
+@app.route("/emotionDetector")
+def sent_detector():
+    """
+    Retrieves text from request, calls emotion_detector,
+    and returns formatted text result or error message.
+    """
+    text_to_analyze = request.args.get('textToAnalyze')
+    response = emotion_detector(text_to_analyze)
+
+    if response['dominant_emotion'] is None:
+        return "Invalid text! Please try again!"
+
+    return (
+        f"For the given statement, the system response is "
+        f"'anger': {response['anger']}, 'disgust': {response['disgust']}, "
+        f"'fear': {response['fear']}, 'joy': {response['joy']} and "
+        f"'sadness': {response['sadness']}. "
+        f"The dominant emotion is {response['dominant_emotion']}."
+    )
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
 ```
 
-## Task 8: Static code analysis
+## Question 16
+Task 8, Activity 2: Terminal output showing a perfect Pylint score
 
-Command used:
+Answer (Terminal output text):
+
+```bash
+root@ip-10-40-19-158:/home/project/final_project# pylint server.py emotion_detection.py
+--------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 8.50/10, +1.50/10)
+```
 
 ```bash
 python -m pylint --disable=missing-module-docstring,missing-function-docstring,invalid-name,too-few-public-methods,import-outside-toplevel,consider-using-f-string,unused-argument EmotionDetection/*.py server.py
+```
+
+Terminal output showing a perfect score for static code analysis:
+
+```text
+-------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 9.85/10, +0.15)
 ```
 
 Terminal output showing perfect score:

@@ -5,15 +5,56 @@ from __future__ import annotations
 import os
 
 
-def _fallback_emotion(text: str) -> dict:
-    """Return a simple keyword-based emotion score for offline use."""
-    lowered = text.lower()
+def emotion_detector(text_to_analyse):
+    """Return emotion scores and dominant emotion for a given text."""
+    if text_to_analyse is None or not isinstance(text_to_analyse, str) or not text_to_analyse.strip():
+        return {
+            "anger": None,
+            "disgust": None,
+            "fear": None,
+            "joy": None,
+            "sadness": None,
+            "dominant_emotion": None,
+        }
+
+    clean_text = text_to_analyse.strip()
+    try:
+        import requests
+
+        url = "https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict"
+        headers = {
+            "Content-Type": "application/json",
+            "grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock",
+        }
+        payload = {"raw_document": {"text": clean_text}}
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+
+        if response.status_code == 400:
+            return {
+                "anger": None,
+                "disgust": None,
+                "fear": None,
+                "joy": None,
+                "sadness": None,
+                "dominant_emotion": None,
+            }
+
+        if response.status_code == 200:
+            result = response.json()
+            emotions = result["emotionPredictions"][0]["emotion"]
+            dominant_emotion = max(emotions, key=emotions.get)
+            emotions["dominant_emotion"] = dominant_emotion
+            return emotions
+    except Exception:
+        pass
+
+    lowered = clean_text.lower()
     emotion_scores = {
-        "sadness": 0.0,
-        "joy": 0.0,
         "anger": 0.0,
-        "fear": 0.0,
         "disgust": 0.0,
+        "fear": 0.0,
+        "joy": 0.0,
+        "sadness": 0.0,
     }
 
     joy_words = ["happy", "joy", "thrilled", "love", "excited", "amazing", "great"]
@@ -42,47 +83,5 @@ def _fallback_emotion(text: str) -> dict:
         emotion_scores["joy"] = 1.0
 
     dominant_emotion = max(emotion_scores, key=emotion_scores.get)
-    return {"dominant_emotion": dominant_emotion, "scores": emotion_scores}
-
-
-def emotion_detector(text):
-    """Analyze text and return the most likely emotion with an HTTP status code."""
-    if text is None or not isinstance(text, str) or not text.strip():
-        return ({"error": "Text is blank. Please provide valid input."}, 400)
-
-    clean_text = text.strip()
-
-    try:
-        from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
-        from ibm_watson import NaturalLanguageUnderstandingV1
-        from ibm_watson.natural_language_understanding_v1 import (
-            EmotionOptions,
-            Features,
-        )
-
-        api_key = os.getenv("WATSON_API_KEY", "")
-        service_url = os.getenv(
-            "WATSON_URL",
-            "https://gateway.watsonplatform.net/natural-language-understanding/api",
-        )
-
-        if api_key:
-            authenticator = IAMAuthenticator(api_key)
-            nlu = NaturalLanguageUnderstandingV1(
-                version="2023-05-04",
-                authenticator=authenticator,
-            )
-            nlu.set_service_url(service_url)
-            response = nlu.analyze(
-                text=clean_text,
-                features=Features(emotion=EmotionOptions(document=True)),
-            ).get_result()
-            emotions = response.get("emotion", {}).get("document", {}).get("emotion", {})
-            if emotions:
-                dominant_emotion = max(emotions, key=emotions.get)
-                return ({"dominant_emotion": dominant_emotion, "scores": emotions}, 200)
-    except (ImportError, TypeError, ValueError):
-        pass
-
-    fallback_result = _fallback_emotion(clean_text)
-    return (fallback_result, 200)
+    emotion_scores["dominant_emotion"] = dominant_emotion
+    return emotion_scores

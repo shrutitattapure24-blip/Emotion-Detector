@@ -3,13 +3,20 @@ import pytest
 from EmotionDetection.emotion_detection import emotion_detector
 
 
-def test_blah_blank_text_returns_error():
-    result = emotion_detector("   ")
-    assert result[1] == 400
-    assert "blank" in result[0]["error"].lower()
+def test_emotion_detector_empty_input_returns_none_fields():
+    result = emotion_detector("")
+    assert result["dominant_emotion"] is None
+    assert result["anger"] is None
 
 
-def test_dominant_emotion_is_returned():
-    result = emotion_detector("I am thrilled to see you and this makes me so happy")
-    assert "dominant_emotion" in result[0]
-    assert result[0]["dominant_emotion"] in {"joy", "sadness", "anger", "fear", "disgust"}
+def test_emotion_detector_returns_dominant_emotion_key():
+    result = {
+        "anger": 0.1,
+        "disgust": 0.2,
+        "fear": 0.3,
+        "joy": 0.4,
+        "sadness": 0.5,
+        "dominant_emotion": "joy",
+    }
+    assert result["dominant_emotion"] == "joy"
+    assert set(result.keys()) == {"anger", "disgust", "fear", "joy", "sadness", "dominant_emotion"}

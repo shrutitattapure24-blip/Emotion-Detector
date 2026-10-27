@@ -1,15 +1,16 @@
-# Emotion Detector
+# Final Project
 
-This project contains an emotion detection app built with IBM Watson NLP and Flask.
+Emotion Detector application built with IBM Watson NLP and Flask.
 
 ## Files
 - EmotionDetection/emotion_detection.py
 - EmotionDetection/__init__.py
 - server.py
+- templates/index.html
 - test_emotion_detection.py
 
 ## Run tests
-pytest -q
+python -m pytest -q
 
 ## Run app
 python server.py
